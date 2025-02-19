@@ -1,7 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Button, Stack, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Card, CardContent, CardActions, Grid } from '@mui/material';
+import {
+  Button,
+  Stack,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+} from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { addDoc, collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
@@ -11,15 +25,19 @@ const CursoScreen = () => {
   const [cursos, setCursos] = useState([]);
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Estado para almacenar los datos del curso tanto al crear como al editar
   const [nuevoCurso, setNuevoCurso] = useState({
     nombre: '',
     descripcion: '',
     fechaInicio: '',
     fechaFin: '',
     estado: 'Activo',
+    googleFormLink: '',
   });
 
-  const [cursoEditado, setCursoEditado] = useState(null); // Para almacenar el curso que se está editando
+  // Estado para almacenar la referencia del curso que se está editando (solo para obtener la id)
+  const [cursoEditado, setCursoEditado] = useState(null);
 
   // Cargar cursos en tiempo real desde Firebase
   useEffect(() => {
@@ -29,9 +47,15 @@ const CursoScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  // Agregar nuevo curso
+  // Agregar un nuevo curso
   const agregarCurso = async () => {
-    if (!nuevoCurso.nombre || !nuevoCurso.descripcion || !nuevoCurso.fechaInicio || !nuevoCurso.fechaFin) {
+    if (
+      !nuevoCurso.nombre ||
+      !nuevoCurso.descripcion ||
+      !nuevoCurso.fechaInicio ||
+      !nuevoCurso.fechaFin ||
+      !nuevoCurso.googleFormLink
+    ) {
       alert('Por favor, completa todos los campos.');
       return;
     }
@@ -42,8 +66,16 @@ const CursoScreen = () => {
         ...nuevoCurso,
         fecha: new Date().toISOString(),
       });
-      setNuevoCurso({ nombre: '', descripcion: '', fechaInicio: '', fechaFin: '', estado: 'Activo' });
-      setOpen(false); // Cerrar el modal
+      // Reiniciar el formulario
+      setNuevoCurso({
+        nombre: '',
+        descripcion: '',
+        fechaInicio: '',
+        fechaFin: '',
+        estado: 'Activo',
+        googleFormLink: '',
+      });
+      setOpen(false);
     } catch (error) {
       alert('Error al agregar curso: ' + error.message);
     } finally {
@@ -51,7 +83,7 @@ const CursoScreen = () => {
     }
   };
 
-  // Eliminar curso
+  // Eliminar un curso
   const eliminarCurso = async (cursoId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este curso?')) {
       try {
@@ -63,9 +95,15 @@ const CursoScreen = () => {
     }
   };
 
-  // Editar curso
+  // Editar un curso utilizando los valores de "nuevoCurso" y la id de "cursoEditado"
   const editarCurso = async () => {
-    if (!cursoEditado.nombre || !cursoEditado.descripcion || !cursoEditado.fechaInicio || !cursoEditado.fechaFin) {
+    if (
+      !nuevoCurso.nombre ||
+      !nuevoCurso.descripcion ||
+      !nuevoCurso.fechaInicio ||
+      !nuevoCurso.fechaFin ||
+      !nuevoCurso.googleFormLink
+    ) {
       alert('Por favor, completa todos los campos.');
       return;
     }
@@ -73,10 +111,19 @@ const CursoScreen = () => {
     setIsLoading(true);
     try {
       await updateDoc(doc(db, 'cursos', cursoEditado.id), {
-        ...cursoEditado,
+        ...nuevoCurso,
       });
-      setCursoEditado(null); // Limpiar estado de edición
-      setOpen(false); // Cerrar el modal
+      setCursoEditado(null);
+      // Reiniciar el formulario
+      setNuevoCurso({
+        nombre: '',
+        descripcion: '',
+        fechaInicio: '',
+        fechaFin: '',
+        estado: 'Activo',
+        googleFormLink: '',
+      });
+      setOpen(false);
     } catch (error) {
       alert('Error al actualizar curso: ' + error.message);
     } finally {
@@ -84,7 +131,7 @@ const CursoScreen = () => {
     }
   };
 
-  // Mostrar los datos en el modal de edición
+  // Al hacer clic en "Editar", se carga el curso seleccionado en "nuevoCurso" y se guarda su id en "cursoEditado"
   const handleEditarClick = (curso) => {
     setCursoEditado(curso);
     setNuevoCurso({
@@ -93,6 +140,7 @@ const CursoScreen = () => {
       fechaInicio: curso.fechaInicio,
       fechaFin: curso.fechaFin,
       estado: curso.estado,
+      googleFormLink: curso.googleFormLink || '',
     });
     setOpen(true);
   };
@@ -100,20 +148,33 @@ const CursoScreen = () => {
   return (
     <Stack spacing={3} sx={{ p: 4 }}>
       <Stack direction="row" spacing={3}>
-        <Stack spacing={1} sx={{ flex: "1 1 auto" }}>
-          <Typography variant="h4" color="primary">Gestión de Cursos</Typography>
+        <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
+          <Typography variant="h4" color="primary">
+            Gestión de Cursos
+          </Typography>
         </Stack>
         <Button
           startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />}
           variant="contained"
           sx={{ backgroundColor: '#197030', color: 'white' }}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            // Al agregar, reiniciamos el formulario y dejamos cursoEditado en null
+            setNuevoCurso({
+              nombre: '',
+              descripcion: '',
+              fechaInicio: '',
+              fechaFin: '',
+              estado: 'Activo',
+              googleFormLink: '',
+            });
+            setCursoEditado(null);
+            setOpen(true);
+          }}
         >
           Agregar Curso
         </Button>
       </Stack>
 
-      {/* Grid de cursos */}
       <Grid container spacing={3}>
         {cursos.length === 0 ? (
           <Typography>No hay cursos disponibles</Typography>
@@ -133,7 +194,7 @@ const CursoScreen = () => {
                     Fecha de Fin: {new Date(curso.fechaFin).toLocaleDateString()}
                   </Typography>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
-                    <QRCode value={curso.id} size={80} />
+                    <QRCode value={curso.googleFormLink || ''} size={90} />
                   </div>
                   <Typography variant="caption" sx={{ mt: 1 }} color="gray">
                     Estado: {curso.estado} | ID: {curso.id}
@@ -153,7 +214,6 @@ const CursoScreen = () => {
         )}
       </Grid>
 
-      {/* Diálogo para agregar o editar curso */}
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>{cursoEditado ? 'Editar Curso' : 'Agregar Curso'}</DialogTitle>
         <DialogContent>
@@ -193,6 +253,13 @@ const CursoScreen = () => {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
+              label="Enlace de Google Forms"
+              variant="outlined"
+              fullWidth
+              value={nuevoCurso.googleFormLink}
+              onChange={(e) => setNuevoCurso({ ...nuevoCurso, googleFormLink: e.target.value })}
+            />
+            <TextField
               select
               label="Estado"
               variant="outlined"
@@ -207,7 +274,11 @@ const CursoScreen = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={cursoEditado ? editarCurso : agregarCurso} disabled={isLoading}>
+          <Button
+            variant="contained"
+            onClick={cursoEditado ? editarCurso : agregarCurso}
+            disabled={isLoading}
+          >
             {isLoading ? 'Guardando...' : cursoEditado ? 'Actualizar' : 'Guardar'}
           </Button>
         </DialogActions>
