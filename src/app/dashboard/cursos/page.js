@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Button, Stack, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Card, CardContent, CardActions, Grid } from '@mui/material';
+import {
+  Button, Stack, Typography, Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField, MenuItem, Card, CardContent, CardActions, Grid
+} from '@mui/material';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { addDoc, collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
@@ -16,12 +19,13 @@ const CursoScreen = () => {
     descripcion: '',
     fechaInicio: '',
     fechaFin: '',
+    modalidad: 'Virtual', // ✅ Nuevo campo modalidad
+    duracion: '', // ✅ Nuevo campo duración
     estado: 'Activo',
   });
 
-  const [cursoEditado, setCursoEditado] = useState(null); // Para almacenar el curso que se está editando
+  const [cursoEditado, setCursoEditado] = useState(null);
 
-  // Cargar cursos en tiempo real desde Firebase
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'cursos'), (snapshot) => {
       setCursos(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
@@ -29,9 +33,9 @@ const CursoScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  // Agregar nuevo curso
   const agregarCurso = async () => {
-    if (!nuevoCurso.nombre || !nuevoCurso.descripcion || !nuevoCurso.fechaInicio || !nuevoCurso.fechaFin) {
+    if (!nuevoCurso.nombre || !nuevoCurso.descripcion || !nuevoCurso.fechaInicio || 
+        !nuevoCurso.fechaFin || !nuevoCurso.duracion) {
       alert('Por favor, completa todos los campos.');
       return;
     }
@@ -42,8 +46,8 @@ const CursoScreen = () => {
         ...nuevoCurso,
         fecha: new Date().toISOString(),
       });
-      setNuevoCurso({ nombre: '', descripcion: '', fechaInicio: '', fechaFin: '', estado: 'Activo' });
-      setOpen(false); // Cerrar el modal
+      setNuevoCurso({ nombre: '', descripcion: '', fechaInicio: '', fechaFin: '', modalidad: 'Virtual', duracion: '', estado: 'Activo' });
+      setOpen(false);
     } catch (error) {
       alert('Error al agregar curso: ' + error.message);
     } finally {
@@ -51,7 +55,6 @@ const CursoScreen = () => {
     }
   };
 
-  // Eliminar curso
   const eliminarCurso = async (cursoId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este curso?')) {
       try {
@@ -63,9 +66,9 @@ const CursoScreen = () => {
     }
   };
 
-  // Editar curso
   const editarCurso = async () => {
-    if (!cursoEditado.nombre || !cursoEditado.descripcion || !cursoEditado.fechaInicio || !cursoEditado.fechaFin) {
+    if (!cursoEditado.nombre || !cursoEditado.descripcion || !cursoEditado.fechaInicio || 
+        !cursoEditado.fechaFin || !cursoEditado.duracion) {
       alert('Por favor, completa todos los campos.');
       return;
     }
@@ -75,8 +78,8 @@ const CursoScreen = () => {
       await updateDoc(doc(db, 'cursos', cursoEditado.id), {
         ...cursoEditado,
       });
-      setCursoEditado(null); // Limpiar estado de edición
-      setOpen(false); // Cerrar el modal
+      setCursoEditado(null);
+      setOpen(false);
     } catch (error) {
       alert('Error al actualizar curso: ' + error.message);
     } finally {
@@ -84,7 +87,6 @@ const CursoScreen = () => {
     }
   };
 
-  // Mostrar los datos en el modal de edición
   const handleEditarClick = (curso) => {
     setCursoEditado(curso);
     setNuevoCurso({
@@ -92,6 +94,8 @@ const CursoScreen = () => {
       descripcion: curso.descripcion,
       fechaInicio: curso.fechaInicio,
       fechaFin: curso.fechaFin,
+      modalidad: curso.modalidad,
+      duracion: curso.duracion,
       estado: curso.estado,
     });
     setOpen(true);
@@ -132,6 +136,12 @@ const CursoScreen = () => {
                   <Typography variant="subtitle2">
                     Fecha de Fin: {new Date(curso.fechaFin).toLocaleDateString()}
                   </Typography>
+                  <Typography variant="subtitle2">
+                    Modalidad: {curso.modalidad} ✅
+                  </Typography>
+                  <Typography variant="subtitle2">
+                    Duración: {curso.duracion} ⏳
+                  </Typography>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
                     <QRCode value={curso.id} size={80} />
                   </div>
@@ -158,51 +168,21 @@ const CursoScreen = () => {
         <DialogTitle>{cursoEditado ? 'Editar Curso' : 'Agregar Curso'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <TextField
-              label="Nombre del Curso"
-              variant="outlined"
-              fullWidth
-              value={nuevoCurso.nombre}
-              onChange={(e) => setNuevoCurso({ ...nuevoCurso, nombre: e.target.value })}
-            />
-            <TextField
-              label="Descripción"
-              variant="outlined"
-              multiline
-              rows={3}
-              fullWidth
-              value={nuevoCurso.descripcion}
-              onChange={(e) => setNuevoCurso({ ...nuevoCurso, descripcion: e.target.value })}
-            />
-            <TextField
-              label="Fecha de Inicio"
-              type="date"
-              variant="outlined"
-              fullWidth
-              value={nuevoCurso.fechaInicio}
-              onChange={(e) => setNuevoCurso({ ...nuevoCurso, fechaInicio: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Fecha de Fin"
-              type="date"
-              variant="outlined"
-              fullWidth
-              value={nuevoCurso.fechaFin}
-              onChange={(e) => setNuevoCurso({ ...nuevoCurso, fechaFin: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              select
-              label="Estado"
-              variant="outlined"
-              fullWidth
-              value={nuevoCurso.estado}
-              onChange={(e) => setNuevoCurso({ ...nuevoCurso, estado: e.target.value })}
-            >
-              <MenuItem value="Activo">Activo</MenuItem>
-              <MenuItem value="Inactivo">Inactivo</MenuItem>
+            <TextField label="Nombre del Curso" variant="outlined" fullWidth value={nuevoCurso.nombre}
+              onChange={(e) => setNuevoCurso({ ...nuevoCurso, nombre: e.target.value })} />
+            <TextField label="Descripción" variant="outlined" multiline rows={3} fullWidth value={nuevoCurso.descripcion}
+              onChange={(e) => setNuevoCurso({ ...nuevoCurso, descripcion: e.target.value })} />
+            <TextField label="Fecha de Inicio" type="date" variant="outlined" fullWidth value={nuevoCurso.fechaInicio}
+              onChange={(e) => setNuevoCurso({ ...nuevoCurso, fechaInicio: e.target.value })} InputLabelProps={{ shrink: true }} />
+            <TextField label="Fecha de Fin" type="date" variant="outlined" fullWidth value={nuevoCurso.fechaFin}
+              onChange={(e) => setNuevoCurso({ ...nuevoCurso, fechaFin: e.target.value })} InputLabelProps={{ shrink: true }} />
+            <TextField select label="Modalidad" variant="outlined" fullWidth value={nuevoCurso.modalidad}
+              onChange={(e) => setNuevoCurso({ ...nuevoCurso, modalidad: e.target.value })}>
+              <MenuItem value="Virtual">Virtual</MenuItem>
+              <MenuItem value="Presencial">Presencial</MenuItem>
             </TextField>
+            <TextField label="Duración" variant="outlined" fullWidth value={nuevoCurso.duracion}
+              onChange={(e) => setNuevoCurso({ ...nuevoCurso, duracion: e.target.value })} />
           </Stack>
         </DialogContent>
         <DialogActions>
